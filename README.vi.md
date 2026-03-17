@@ -6,6 +6,16 @@
 
 **Tích hợp nhận dạng giọng nói tiếng Việt (ASR) cho Home Assistant sử dụng Wyoming protocol.**
 
+---
+
+### 🏠 Thêm Integration vào Home Assistant của bạn
+
+[![Open your Home Assistant instance and show the integration dialog.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=wyoming_vietnamese)
+
+**[Mở My Home Assistant](https://my.home-assistant.io/redirect/integration/?domain=wyoming_vietnamese)** → Click nút để thêm integration trực tiếp!
+
+---
+
 ## 🎯 Tính năng chính
 
 - 🇻🇳 **Nhận dạng tiếng Việt chính xác**: WER 7.97% (độ lỗi nhận dạng chỉ 7.97%)

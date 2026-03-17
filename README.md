@@ -7,6 +7,16 @@ Vietnamese Automatic Speech Recognition (ASR) integration for Home Assistant usi
 
 > 🇻🇳 **[Đọc bản tiếng Việt](README.vi.md)** | **[English version](README.md)**
 
+---
+
+### 🏠 Add Integration to My Home Assistant
+
+[![Open your Home Assistant instance and show the integration dialog.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=wyoming_vietnamese)
+
+**[Open My Home Assistant](https://my.home-assistant.io/redirect/integration/?domain=wyoming_vietnamese)** → Click button to add integration directly!
+
+---
+
 ## Features
 
 - **Vietnamese ASR**: High-accuracy Vietnamese speech recognition (WER 7.97%)
