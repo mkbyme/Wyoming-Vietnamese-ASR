@@ -9,11 +9,19 @@ Vietnamese Automatic Speech Recognition (ASR) integration for Home Assistant usi
 
 ---
 
-### 🏠 Add Integration to My Home Assistant
+### 🏠 Add to HACS (Custom Repository)
 
-[![Open your Home Assistant instance and show the integration dialog.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=wyoming_vietnamese)
+Chưa có trong HACS default, cần add thủ công:
 
-**[Open My Home Assistant](https://my.home-assistant.io/redirect/integration/?domain=wyoming_vietnamese)** → Click button to add integration directly!
+1. Mở **HACS** → **Integrations**
+2. Click **⋮** (menu góc phải) → **Custom repositories**
+3. Nhập:
+   - **Repository:** `https://github.com/gnolnos/Wyoming-Vietnamese-ASR`
+   - **Category:** `Integration`
+4. Click **Add**
+5. Tìm **Wyoming Vietnamese ASR** → **Download**
+6. **Khởi động lại** Home Assistant
+7. Thêm integration qua **Settings → Devices & Services**
 
 ---
 

@@ -8,11 +8,19 @@
 
 ---
 
-### 🏠 Thêm Integration vào Home Assistant của bạn
+### 🏠 Thêm vào HACS (Custom Repository)
 
-[![Open your Home Assistant instance and show the integration dialog.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=wyoming_vietnamese)
+Chưa có trong HACS default, cần add thủ công:
 
-**[Mở My Home Assistant](https://my.home-assistant.io/redirect/integration/?domain=wyoming_vietnamese)** → Click nút để thêm integration trực tiếp!
+1. Mở **HACS** → **Integrations**
+2. Click **⋮** (menu góc phải) → **Custom repositories**
+3. Nhập:
+   - **Repository:** `https://github.com/gnolnos/Wyoming-Vietnamese-ASR`
+   - **Category:** `Integration`
+4. Click **Add**
+5. Tìm **Wyoming Vietnamese ASR** → **Download**
+6. **Khởi động lại** Home Assistant
+7. Thêm integration qua **Settings → Devices & Services**
 
 ---
 
