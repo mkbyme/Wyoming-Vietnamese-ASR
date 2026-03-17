@@ -41,8 +41,8 @@ jobs:
       - name: Build and push Docker images
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: docker/Dockerfile
+          context: ./docker
+          file: ./docker/Dockerfile
           push: true
           tags: |
             gnolnos/wyoming-vietnamese-asr:${{ github.ref_name }}
@@ -54,8 +54,8 @@ jobs:
       - name: Build FastAPI variant
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: docker/Dockerfile.fastapi
+          context: ./docker
+          file: ./docker/Dockerfile.fastapi
           push: true
           tags: |
             gnolnos/wyoming-vietnamese-asr:${{ github.ref_name }}-fastapi
