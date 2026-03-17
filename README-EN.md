@@ -2,7 +2,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/gnolnos/wyoming-vietnamese-asr)](https://github.com/gnolnos/wyoming-vietnamese-asr/releases)
 [![HACS](https://img.shields.io/badge/HACS-Default-orange.svg)](https://hacs.xyz/)
-[![Add-on](https://my.home-assistant.io/badges/addon_repo.svg)](https://my.home-assistant.io/redirect/developer_tools/add_addon/?repository_url=https://github.com/gnolnos/Wyoming-Vietnamese-ASR)
+[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgnolnos%2FWyoming-Vietnamese-ASR)
 [![Docker](https://img.shields.io/docker/pulls/gnolnos/wyoming-vietnamese-asr)](https://hub.docker.com/r/gnolnos/wyoming-vietnamese-asr)
 
 **Vietnamese Automatic Speech Recognition (ASR) integration for Home Assistant.**
@@ -11,9 +11,9 @@
 
 ---
 
-### 🏠 Thêm vào HACS (Custom Repository)
+### 🏠 Add to Home Assistant (Add-on Repository)
 
-Chưa có trong HACS default, cần add thủ công:
+Add this repository to Home Assistant:
 
 1. Mở **HACS** → **Integrations**
 2. Click **⋮** (menu góc phải) → **Custom repositories**
