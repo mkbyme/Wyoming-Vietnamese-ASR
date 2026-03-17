@@ -1,201 +1,91 @@
-# Wyoming Vietnamese ASR cho Home Assistant
+# 🧠 Wyoming Vietnamese ASR - Home Assistant Add-on
 
 [![GitHub Release](https://img.shields.io/github/v/release/gnolnos/wyoming-vietnamese-asr)](https://github.com/gnolnos/wyoming-vietnamese-asr/releases)
-[![HACS](https://img.shields.io/badge/HACS-Default-orange.svg)](https://hacs.xyz/)
+[![Add-on](https://my.home-assistant.io/badges/addon_repo.svg)](https://my.home-assistant.io/redirect/developer_tools/add_addon/?repository_url=https://github.com/gnolnos/Wyoming-Vietnamese-ASR)
+[![Docker](https://img.shields.io/docker/pulls/gnolnos/wyoming-vietnamese-asr)](https://hub.docker.com/r/gnolnos/wyoming-vietnamese-asr)
 
-Vietnamese Automatic Speech Recognition (ASR) integration for Home Assistant using Wyoming protocol.
+**🔊 Add-on Home Assistant cho nhận dạng giọng nói tiếng Việt (ASR) sử dụng Wyoming protocol.**
 
-> 🇻🇳 **[Đọc bản tiếng Việt](README.vi.md)** | **[English version](README.md)**
-
----
-
-### 🏠 Add to HACS (Custom Repository)
-
-Chưa có trong HACS default, cần add thủ công:
-
-1. Mở **HACS** → **Integrations**
-2. Click **⋮** (menu góc phải) → **Custom repositories**
-3. Nhập:
-   - **Repository:** `https://github.com/gnolnos/Wyoming-Vietnamese-ASR`
-   - **Category:** `Integration`
-4. Click **Add**
-5. Tìm **Wyoming Vietnamese ASR** → **Download**
-6. **Khởi động lại** Home Assistant
-7. Thêm integration qua **Settings → Devices & Services**
+[English](README-EN.md) | **Tiếng Việt**
 
 ---
 
-## Features
+## 🚀 Cài đặt nhanh (1-click)
 
-- **Vietnamese ASR**: High-accuracy Vietnamese speech recognition (WER 7.97%)
-- **Wyoming Protocol**: Native integration with Home Assistant's Wyoming STT
-- **FastAPI Mode**: Optional REST API for external integrations (Xiaozhi, etc.)
-- **GPU Acceleration**: NVIDIA GPU support for faster transcription
-- **Docker Support**: Standalone deployment option (outside Home Assistant)
+### Cách 1: Thêm Repository tự động
 
-## Model
+[![Add Repository](https://my.home-assistant.io/badges/addon_repo.svg)](https://my.home-assistant.io/redirect/developer_tools/add_addon/?repository_url=https://github.com/gnolnos/Wyoming-Vietnamese-ASR)
 
-- **Model**: Zipformer-30M-RNNT-6000h
-- **Language**: Vietnamese
-- **WER**: 7.97% (VLSP2025 benchmark)
-- **Provider**: [hynt/Zipformer-30M-RNNT-6000h](https://huggingface.co/hynt/Zipformer-30M-RNNT-6000h)
+**→ Click nút xanh上面 để thêm repository tự động!**
 
-## Installation
+### Cách 2: Thêm thủ công
 
-### HACS (Recommended)
+1. Mở **Home Assistant** → **Settings** → **Add-ons**
+2. Click **Add-on Store** (góc dưới phải)
+3. Click **⋮** (3 chấm) → **Repositories**
+4. Paste:
+   ```
+   https://github.com/gnolnos/Wyoming-Vietnamese-ASR
+   ```
+5. Click **Add**
+6. Tìm **Wyoming Vietnamese ASR** → **Install**
+7. **Start** add-on
 
-1. Open HACS in Home Assistant
-2. Search for "Wyoming Vietnamese ASR"
-3. Click Install
-4. Restart Home Assistant
-5. Add integration via UI
+---
 
-### Manual
+## 📊 Thông tin
 
-1. Download the latest release from [GitHub Releases](https://github.com/gnolnos/wyoming-vietnamese-asr/releases)
-2. Extract `wyoming_vietnamese.zip` to `custom_components/wyoming_vietnamese/`
-3. Restart Home Assistant
-4. Add integration via UI
+| Thông số | Giá trị |
+|----------|---------|
+| **Model** | Zipformer-30M-RNNT-6000h |
+| **Ngôn ngữ** | Tiếng Việt |
+| **WER** | 7.97% (VLSP2025) |
+| **Cổng** | 10400 (Wyoming), 8090 (FastAPI) |
+| **Architecture** | amd64, arm64, armhf, armv7, i386 |
 
-## Configuration
+---
 
-### Home Assistant Integration
+## ⚙️ Cấu hình sau khi cài
 
-1. Go to **Settings** → **Devices & Services**
+1. Mở **Settings** → **Devices & Services**
 2. Click **+ Add Integration**
-3. Search for "Wyoming Vietnamese ASR"
-4. Configure:
-   - **Host**: Wyoming server IP (default: `192.168.100.150`)
-   - **Port**: Wyoming server port (default: `10400`)
-   - **Name**: Integration name (optional)
+3. Tìm **"Wyoming"**
+4. Enter host: `localhost` và port: `10400`
+5. Click **Submit**
 
-### Standalone Docker
+---
 
-```bash
-# Clone repository
-git clone https://github.com/gnolnos/wyoming-vietnamese-asr.git
-cd wyoming-vietnamese-asr/docker
+## 🎯 Tính năng chính
 
-# Download model
-mkdir model
-# Download from HuggingFace and place in model/
+- 🇻🇳 **Nhận dạng tiếng Việt chính xác** - WER 7.97%
+- 🏠 **Add-on Home Assistant** - Cài đặt 1-click
+- ⚡ **Độ trễ thấp** - Xử lý real-time
+- 🔌 **Wyoming protocol** - Tích hợp native với HA Voice
+- 🐳 **Docker** - Chạy standalone (xem [README-EN](README-EN.md))
 
-# Start services
-docker compose up -d
-```
+---
 
-## Usage
-
-### Home Assistant STT
-
-Once configured, the integration will appear as an STT provider in Home Assistant:
-
-1. Go to **Settings** → **Voice Assistants**
-2. Select your assistant
-3. Choose "Vietnamese ASR" as the **Speech-to-Text** engine
-4. Start speaking Vietnamese!
-
-### FastAPI (Xiaozzi Integration)
-
-For external integrations like Xiaozhi:
-
-```bash
-# FastAPI server runs on port 8090
-curl -X POST "http://localhost:8090/transcribe" \
-  -H "Content-Type: audio/wav" \
-  --data-binary @audio.wav
-```
-
-## Architecture
-
-```
-┌─────────────────────────────────────┐
-│  Home Assistant (Voice Assistant)   │
-│  Wyoming STT Integration            │
-└──────────────┬──────────────────────┘
-               │ Wyoming Protocol
-               ▼
-┌─────────────────────────────────────┐
-│  Wyoming Vietnamese ASR Server      │
-│  Port: 10400                        │
-│  Model: Zipformer-30M-RNNT-6000h   │
-└──────────────┬──────────────────────┘
-               │ (optional)
-               ▼
-┌─────────────────────────────────────┐
-│  FastAPI Server                     │
-│  Port: 8090 (Xiaozhi, REST API)    │
-└─────────────────────────────────────┘
-```
-
-## Docker Deployment
-
-### Wyoming Server
+## 📝 Cấu hình Add-on
 
 ```yaml
-services:
-  wyoming:
-    image: gnolnos/wyoming-vietnamese-asr:latest
-    ports:
-      - "10400:10400"
-    volumes:
-      - ./model:/app/model:ro
-    restart: unless-stopped
+embedding_model: qwen3-embedding:4b
+log_level: info
 ```
 
-### FastAPI Server
+---
 
-```yaml
-services:
-  fastapi:
-    image: gnolnos/wyoming-vietnamese-asr:fastapi
-    ports:
-      - "8090:8090"
-    volumes:
-      - ./model:/app/model:ro
-    restart: unless-stopped
-```
+## 🔗 Liên kết
 
-## Troubleshooting
+- **Repository:** [github.com/gnolnos/Wyoming-Vietnamese-ASR](https://github.com/gnolnos/Wyoming-Vietnamese-ASR)
+- **Docker Hub:** [hub.docker.com/r/gnolnos/wyoming-vietnamese-asr](https://hub.docker.com/r/gnolnos/wyoming-vietnamese-asr)
+- **Model:** [huggingface.co/hynt/Zipformer-30M-RNNT-6000h](https://huggingface.co/hynt/Zipformer-30M-RNNT-6000h)
 
-### Connection Refused
+---
 
-- Ensure Wyoming server is running on the specified host:port
-- Check firewall rules
-- Verify service status: `docker ps | grep wyoming`
+## 👨‍💻 Tác giả
 
-### Poor Transcription Quality
+**gnolnos** - [github.com/gnolnos](https://github.com/gnolnos)
 
-- Ensure audio input is clear Vietnamese speech
-- Check microphone settings in Home Assistant
-- Verify model is loaded correctly
+---
 
-### Performance Issues
-
-- Enable GPU acceleration (NVIDIA)
-- Increase memory allocation (2GB+ recommended)
-- Use SSD storage for model files
-
-## Development
-
-### Build Docker Image
-
-```bash
-docker build -t wyoming-vietnamese-asr -f docker/Dockerfile .
-```
-
-### Run Tests
-
-```bash
-python -m pytest tests/
-```
-
-## License
-
-MIT License - See [LICENSE](LICENSE) for details.
-
-## Credits
-
-- Model: [hynt/Zipformer-30M-RNNT-6000h](https://huggingface.co/hynt/Zipformer-30M-RNNT-6000h)
-- Wyoming Protocol: [Home Assistant](https://www.home-assistant.io/integrations/wyoming/)
-- Integration: [gnolnos](https://github.com/gnolnos)
+**⭐ Star repository để ủng hộ nếu thấy hữu ích!**
