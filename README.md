@@ -16,7 +16,7 @@
 
 [![Add Repository](https://my.home-assistant.io/badges/addon_repo.svg)](https://my.home-assistant.io/redirect/developer_tools/add_addon/?repository_url=https://github.com/gnolnos/Wyoming-Vietnamese-ASR)
 
-**→ Click nút xanh上面 để thêm repository tự động!**
+**→ Click nút xanh để thêm repository tự động!**
 
 ### Cách 2: Thêm thủ công
 
@@ -84,7 +84,12 @@ log_level: info
 
 ## 👨‍💻 Tác giả
 
-**gnolnos** - [github.com/gnolnos](https://github.com/gnolnos)
+
+**Integration:** [gnolnos](https://github.com/gnolnos) - Phan Sơn Long
+
+**Model:** [hynt (HuggingFace)](https://huggingface.co/hynt/Zipformer-30M-RNNT-6000h) - Zipformer-30M-RNNT-6000h
+
+**Wyoming Protocol:** [Home Assistant](https://www.home-assistant.io/integrations/wyoming/)
 
 ---
 
