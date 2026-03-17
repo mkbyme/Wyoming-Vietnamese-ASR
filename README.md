@@ -1,9 +1,11 @@
-# Wyoming Vietnamese ASR for Home Assistant
+# Wyoming Vietnamese ASR cho Home Assistant
 
 [![GitHub Release](https://img.shields.io/github/v/release/gnolnos/wyoming-vietnamese-asr)](https://github.com/gnolnos/wyoming-vietnamese-asr/releases)
 [![HACS](https://img.shields.io/badge/HACS-Default-orange.svg)](https://hacs.xyz/)
 
 Vietnamese Automatic Speech Recognition (ASR) integration for Home Assistant using Wyoming protocol.
+
+> 🇻🇳 **[Đọc bản tiếng Việt](README.vi.md)** | **[English version](README.md)**
 
 ## Features
 
