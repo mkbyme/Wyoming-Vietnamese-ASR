@@ -19,7 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY server/ ./server/
 COPY fastapi_server.py .
-COPY model/ ./model/
+
+# Create model directory (will be mounted at runtime)
+RUN mkdir -p /app/model
 
 # Expose ports
 EXPOSE 10400 8090
