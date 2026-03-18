@@ -9,14 +9,6 @@ Vietnamese Automatic Speech Recognition for Home Assistant.
 - 🐳 Docker container
 - ⚡ Real-time speech recognition
 
-## Configuration
-
-```yaml
-wyoming_vietnamese_asr:
-  embedding_model: qwen3-embedding:4b
-  log_level: info
-```
-
 ## Usage
 
 1. Install add-on
