@@ -1,7 +1,6 @@
 # 🧠 Wyoming Vietnamese ASR - Home Assistant Add-on
 
 [![GitHub Release](https://img.shields.io/github/v/release/gnolnos/wyoming-vietnamese-asr)](https://github.com/gnolnos/wyoming-vietnamese-asr/releases)
-[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgnolnos%2FWyoming-Vietnamese-ASR)
 [![Docker](https://img.shields.io/docker/pulls/gnolnos/wyoming-vietnamese-asr)](https://hub.docker.com/r/gnolnos/wyoming-vietnamese-asr)
 
 **🔊 Add-on Home Assistant cho nhận dạng giọng nói tiếng Việt (ASR) sử dụng Wyoming protocol.**
