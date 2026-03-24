@@ -1,15 +1,16 @@
-# Wyoming Vietnamese ASR Requirements (Docker Standalone)
+# Wyoming Vietnamese ASR Requirements
 
-# Wyoming protocol support
+# Wyoming protocol
 wyoming==1.5.0
 
-# ✅ THÊM DÒNG NÀY - sherpa-onnx (bao gồm onnxruntime bên trong)
-sherpa-onnx
+# sherpa-onnx: pre-built wheel có sẵn trên PyPI (cp311 manylinux x86_64)
+# KHÔNG dùng bare "sherpa-onnx" → pip sẽ cố build từ source nếu wheel không match
+sherpa-onnx==1.12.32
 
-# ASR model dependencies (CPU version for Docker)
-# onnxruntime==1.16.3
+# Audio processing
 soundfile==0.12.1
 numpy==1.26.2
+scipy==1.11.4
 
 # FastAPI server
 fastapi==0.104.1
@@ -20,7 +21,7 @@ python-multipart==0.0.6
 requests==2.31.0
 aiofiles==23.2.1
 pydantic==2.5.0
-scipy==1.11.4
+pyyaml>=6.0
 
-# download model
-huggingface_hub[cli]
+# HuggingFace download + CLI tools (cli extra deprecated từ v1.0+ nhưng không gây lỗi)
+huggingface_hub[cli]>=0.20.0

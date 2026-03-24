@@ -1,0 +1,40 @@
+# /app/config/config.yaml
+server:
+  host: "0.0.0.0"
+  port: 10400
+  api_host: "0.0.0.0"
+  api_port: 8090
+  log_level: "INFO"
+  mode: "fastapi"
+
+model:
+  id: "nghime-asr"
+  display_name: "NghiMe NghiASR Vietnamese"
+  description: "NghiASR - Nhận dạng giọng nói tiếng Việt bởi NghiMe Studio"
+  attribution_name: "NghiMe"
+  attribution_url: "https://huggingface.co/NghiMe/NghiASR"
+  languages:
+    - "vi"
+
+  hf_model_id: "NghiMe/NghiASR"
+  hf_token: ""
+
+  model_dir: "/app/model"
+
+  # ⚠️ Xác minh tên file thực tế tại: https://huggingface.co/NghiMe/NghiASR/tree/main
+  required_files:
+    - "encoder-epoch-4-avg-4.onnx"
+    - "decoder-epoch-4-avg-4.onnx"
+    - "joiner-epoch-4-avg-4.onnx"
+    - "tokens.txt"
+
+  encoder_file: "encoder-epoch-4-avg-4.onnx"
+  decoder_file: "decoder-epoch-4-avg-4.onnx"
+  joiner_file:  "joiner-epoch-4-avg-4.onnx"
+  tokens_file:  "tokens.txt"
+
+  use_int8: false
+  num_threads: 4
+  sample_rate: 16000
+  provider: "cpu"
+  force_download: false

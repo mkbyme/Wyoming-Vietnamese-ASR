@@ -2,258 +2,433 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/gnolnos/wyoming-vietnamese-asr)](https://github.com/gnolnos/wyoming-vietnamese-asr/releases)
 [![HACS](https://img.shields.io/badge/HACS-Default-orange.svg)](https://hacs.xyz/)
-[![Docker](https://img.shields.io/docker/pulls/gnolnos/wyoming-vietnamese-asr)](https://hub.docker.com/r/gnolnos/wyoming-vietnamese-asr)
+[![Docker](https://img.shields.io/docker/pulls/mkbyme/wyoming-vietnamese-asr)](https://hub.docker.com/r/mkbyme/wyoming-vietnamese-asr)
 
-**Tích hợp nhận dạng giọng nói tiếng Việt (ASR) cho Home Assistant sử dụng Wyoming protocol.**
+Tích hợp Nhận dạng Giọng nói Tiếng Việt (ASR) cho Home Assistant sử dụng giao thức Wyoming.
 
-## 🎯 Tính năng chính
+> 🇬🇧 **[Read English version](README.md)** | 🇻🇳 **[Bản tiếng Việt](README.vi.md)**
 
-- 🇻🇳 **Nhận dạng tiếng Việt chính xác**: WER 7.97% (độ lỗi nhận dạng chỉ 7.97%)
-- 🏠 **Tích hợp native với Home Assistant**: Sử dụng Wyoming protocol
-- ⚡ **Độ trễ thấp**: Xử lý real-time trên CPU hoặc GPU
-- 🐳 **Docker support**: Chạy standalone bên ngoài Home Assistant
-- 🔧 **Dễ cấu hình**: UI configuration qua Home Assistant
+---
 
-## 📊 Thông tin Model
+## ✨ Tính năng
 
-| Thuộc tính | Giá trị |
-|------------|---------|
-| **Model** | Zipformer-30M-RNNT-6000h |
-| **Ngôn ngữ** | Tiếng Việt |
-| **WER** | 7.97% (VLSP2025 benchmark) |
-| **Provider** | [hynt/Zipformer-30M-RNNT-6000h](https://huggingface.co/hynt/Zipformer-30M-RNNT-6000h) |
-| **Kích thước** | ~30MB |
-| **Thread** | 4 threads khuyến nghị |
+- **ASR Tiếng Việt**: Nhận dạng giọng nói tiếng Việt độ chính xác cao (WER 7.97%)
+- **Giao thức Wyoming**: Tích hợp trực tiếp với Wyoming STT của Home Assistant
+- **Chế độ FastAPI**: REST API tùy chọn cho tích hợp bên ngoài (Xiaozhi, v.v.)
+- **Điểm vào duy nhất**: Một file `main.py` xử lý cả Wyoming và FastAPI qua biến `MODE`
+- **Cấu hình linh hoạt**: `config.yaml` (ưu tiên) → Biến môi trường (fallback)
+- **Tự động tải model**: Model tự động tải từ HuggingFace khi khởi động lần đầu
+- **Hỗ trợ Docker**: Triển khai độc lập với image tối ưu multi-stage
 
-## 🛠️ Cài đặt
+---
 
-### Cách 1: HACS (Khuyên dùng)
+## 🧠 Các Model Hỗ Trợ
 
-1. Mở **HACS** trong Home Assistant
+| Model | WER | Định dạng | Nguồn |
+|---|---|---|---|
+| **Zipformer-30M-RNNT-6000h** | 7.97% (VLSP2025) | ONNX FP32/INT8 | [hynt/Zipformer-30M-RNNT-6000h](https://huggingface.co/hynt/Zipformer-30M-RNNT-6000h) |
+| **NghiASR** | — | ONNX | [NghiMe/NghiASR](https://huggingface.co/NghiMe/NghiASR) |
+
+&gt; Mỗi model chạy trong **1 container riêng** với `MODEL_DIR` và `HF_MODEL_ID` tương ứng.
+
+
+
+### Testing 
+
+Hướng dẫn [kiểm tra dịch vụ](./test/README.md)
+---
+
+## 📦 Cài đặt
+
+### HACS (Khuyến nghị)
+
+1. Mở HACS trong Home Assistant
 2. Tìm kiếm **"Wyoming Vietnamese ASR"**
-3. Click **Cài đặt**
-4. **Khởi động lại** Home Assistant
-5. Thêm integration qua UI
+3. Nhấn Cài đặt → Khởi động lại Home Assistant
+4. Thêm tích hợp qua **Cài đặt → Thiết bị &amp; Dịch vụ**
 
-### Cách 2: Cài thủ công
+### Thủ công
 
-1. Tải **wyoming_vietnamese.zip** từ [GitHub Releases](https://github.com/gnolnos/wyoming-vietnamese-asr/releases)
-2. Giải nén vào `custom_components/wyoming_vietnamese/`
-3. **Khởi động lại** Home Assistant
-4. Thêm integration qua UI
+1. Tải bản phát hành mới nhất từ [GitHub Releases](https://github.com/gnolnos/wyoming-vietnamese-asr/releases)
+2. Giải nén `wyoming_vietnamese.zip` vào `custom_components/wyoming_vietnamese/`
+3. Khởi động lại Home Assistant → Thêm tích hợp qua giao diện
 
-### Cách 3: Docker (Standalone)
-
-```bash
-# Clone repository
-git clone https://github.com/gnolnos/wyoming-vietnamese-asr.git
-cd wyoming-vietnamese-asr/docker
-
-# Tạo thư mục model và tải model
-mkdir model
-# Tải model từ HuggingFace và đặt vào thư mục model
-
-# Khởi động dịch vụ
-docker compose up -d
-```
+---
 
 ## ⚙️ Cấu hình
 
-### Cấu hình qua Home Assistant UI
+### Tích hợp Home Assistant
 
-1. Vào **Cài đặt** → **Thiết bị & Dịch vụ**
-2. Click **+ Thêm tích hợp**
-3. Tìm **"Wyoming Vietnamese ASR"**
-4. Điền thông tin:
-   - **Host**: Địa chỉ IP server Wyoming (mặc định: `192.168.100.150`)
+1. Vào **Cài đặt → Thiết bị &amp; Dịch vụ**
+2. Nhấn **+ Thêm tích hợp** → Tìm **"Wyoming Vietnamese ASR"**
+3. Cấu hình:
+   - **Host**: IP của Wyoming server (ví dụ: `192.168.100.150`)
    - **Port**: Cổng Wyoming server (mặc định: `10400`)
-   - **Tên**: Tên tích hợp (tùy chọn)
-5. Click **Hoàn tất**
 
-### Cấu hình Docker standalone
+### `config.yaml` (Khuyến nghị)
+
+Mount `config.yaml` vào `/app/config/config.yaml` để override toàn bộ cấu hình.
+
+#### Model 1: Zipformer-30M (mặc định)
+
+```yaml
+# config.yaml — Zipformer 30M
+server:
+  host: "0.0.0.0"
+  port: 10400
+  api_host: "0.0.0.0"
+  api_port: 8090
+  log_level: "INFO"    # DEBUG | INFO | WARNING | ERROR
+  mode: "wyoming"      # wyoming | fastapi
+
+model:
+  id: "zipformer-vietnamese-30m"
+  display_name: "Zipformer 30M RNNT Vietnamese"
+  description: "Zipformer-30M-RNNT-6000h - WER 7.97% trên VLSP2025"
+  attribution_name: "hynt"
+  attribution_url: "https://huggingface.co/hynt/Zipformer-30M-RNNT-6000h"
+  languages:
+    - "vi"
+
+  hf_model_id: "hynt/Zipformer-30M-RNNT-6000h"
+  hf_token: ""          # hoặc set qua biến môi trường HF_TOKEN
+
+  model_dir: "/app/model"
+
+  # Danh sách file cần xác minh + tải về nếu thiếu
+  required_files:
+    - "encoder-epoch-20-avg-10.onnx"
+    - "decoder-epoch-20-avg-10.onnx"
+    - "joiner-epoch-20-avg-10.onnx"
+    - "config.json"
+
+  encoder_file: "encoder-epoch-20-avg-10.onnx"
+  decoder_file: "decoder-epoch-20-avg-10.onnx"
+  joiner_file:  "joiner-epoch-20-avg-10.onnx"
+  tokens_file:  "config.json"   # đổi thành "tokens.txt" nếu model khác dùng tên đó
+
+  use_int8: false       # true = model INT8 quantized (nhẹ hơn ~2x)
+  num_threads: 4
+  sample_rate: 16000
+  provider: "cpu"       # cpu | cuda | coreml
+  force_download: false
+```
+
+#### Model 2: NghiASR
+
+```yaml
+# config.yaml — NghiASR
+server:
+  host: "0.0.0.0"
+  port: 10401
+  api_host: "0.0.0.0"
+  api_port: 8091
+  log_level: "INFO"
+  mode: "wyoming"
+
+model:
+  id: "nghime-asr"
+  display_name: "NghiMe NghiASR Vietnamese"
+  description: "NghiASR - Nhận dạng giọng nói tiếng Việt bởi NghiMe Studio"
+  attribution_name: "NghiMe"
+  attribution_url: "https://huggingface.co/NghiMe/NghiASR"
+  languages:
+    - "vi"
+
+  hf_model_id: "NghiMe/NghiASR"
+  hf_token: ""
+
+  model_dir: "/app/model"
+
+  # ⚠️ Xác minh tên file thực tế tại: https://huggingface.co/NghiMe/NghiASR/tree/main
+  required_files:
+    - "encoder-epoch-4-avg-4.onnx"
+    - "decoder-epoch-4-avg-4.onnx"
+    - "joiner-epoch-4-avg-4.onnx"
+    - "tokens.txt"
+
+  encoder_file: "encoder-epoch-4-avg-4.onnx"
+  decoder_file: "decoder-epoch-4-avg-4.onnx"
+  joiner_file:  "joiner-epoch-4-avg-4.onnx"
+  tokens_file:  "tokens.txt"
+
+  use_int8: false
+  num_threads: 4
+  sample_rate: 16000
+  provider: "cpu"
+  force_download: false
+```
+
+### Biến Môi Trường (Fallback)
+
+Tất cả field trong `config.yaml` đều có thể override bằng biến môi trường:
+
+| Biến | Mặc định | Mô tả |
+|---|---|---|
+| `MODE` | `wyoming` | `wyoming` hoặc `fastapi` |
+| `SERVER_PORT` | `10400` | Cổng Wyoming TCP |
+| `API_PORT` | `8090` | Cổng FastAPI HTTP |
+| `MODEL_ID` | `zipformer-vietnamese-30m` | ID hiển thị trong HASS |
+| `MODEL_DIR` | `/app/model` | Thư mục chứa file model |
+| `HF_MODEL_ID` | `hynt/Zipformer-30M-RNNT-6000h` | HuggingFace repo |
+| `HF_TOKEN` | _(trống)_ | Token cho repo riêng tư |
+| `TOKENS_FILE` | `config.json` | Tên file tokens |
+| `REQUIRED_FILES` | _(tự động)_ | Danh sách file cần xác minh/tải (CSV) |
+| `USE_INT8` | `false` | Dùng model INT8 quantized |
+| `NUM_THREADS` | `4` | Số luồng CPU cho inference |
+| `PROVIDER` | `cpu` | `cpu`, `cuda`, `coreml` |
+| `FORCE_DOWNLOAD` | `false` | Tải lại dù file đã tồn tại |
+| `CONFIG_FILE` | `/app/config/config.yaml` | Đường dẫn tới file config |
+
+---
+
+## 🐳 Triển khai Docker
+
+### Cấu trúc thư mục
+
+```
+.
+├── config/
+│   └── config.yaml          # cấu hình runtime (mount từ host)
+├── model/                   # file model (mount từ host)
+│   ├── bpe.model
+│   ├── config.json
+│   ├── decoder-epoch-20-avg-10.onnx
+│   ├── encoder-epoch-20-avg-10.onnx
+│   └── joiner-epoch-20-avg-10.onnx
+├── docker-compose.yaml
+├── Dockerfile
+├── main.py                  # điểm vào duy nhất (Wyoming + FastAPI)
+├── healthcheck.py
+├── config.yaml              # config mặc định baked-in
+└── requirements.txt
+```
+
+### Chế độ Wyoming — 1 Model
 
 ```yaml
 services:
-  wyoming-vietnamese-asr:
-    image: gnolnos/wyoming-vietnamese-asr:latest
+  wyoming-asr:
+    build: .
     container_name: wyoming-vietnamese-asr
-    ports:
-      - "10400:10400"  # Wyoming protocol
-      - "8090:8090"    # FastAPI (tùy chọn)
-    environment:
-      - TZ=Asia/Saigon
-      - MODEL_PATH=/app/model
-    volumes:
-      - ./model:/app/model:ro
     restart: unless-stopped
+    environment:
+      MODE: "wyoming"
+      MODEL_DIR: "/app/model"
+      HF_MODEL_ID: "hynt/Zipformer-30M-RNNT-6000h"
+      NUM_THREADS: "4"
+      FORCE_DOWNLOAD: "false"
+    ports:
+      - "10400:10400"
+    volumes:
+      - ./model:/app/model
+      - ./config:/app/config
 ```
 
-## 🎤 Sử dụng
+### Chạy 2 Model Song Song
 
-### Trong Home Assistant
+```yaml
+services:
 
-Sau khi cài đặt, tích hợp sẽ xuất hiện như một nhà cung cấp STT:
+  # ── Model 1: Zipformer 30M (cổng 10400) ──────────────────
+  wyoming-zipformer:
+    build: .
+    container_name: wyoming-zipformer-30m
+    restart: unless-stopped
+    environment:
+      MODE: "wyoming"
+      MODEL_ID: "zipformer-vietnamese-30m"
+      MODEL_DISPLAY_NAME: "Zipformer 30M RNNT Vietnamese"
+      HF_MODEL_ID: "hynt/Zipformer-30M-RNNT-6000h"
+      MODEL_DIR: "/app/model"
+      NUM_THREADS: "4"
+    ports:
+      - "10400:10400"
+    volumes:
+      - ./model:/app/model
+      - ./config:/app/config
 
-1. Vào **Cài đặt** → **Trợ lý giọng nói**
-2. Chọn trợ lý của bạn
-3. Chọn **"Vietnamese ASR"** làmengine **Speech-to-Text**
-4. Bắt đầu nói tiếng Việt!
+  # ── Model 2: NghiASR (cổng 10401) ────────────────────────
+  wyoming-nghiasr:
+    build: .
+    container_name: wyoming-nghiasr
+    restart: unless-stopped
+    environment:
+      MODE: "wyoming"
+      SERVER_PORT: "10401"
+      MODEL_ID: "nghime-asr"
+      MODEL_DISPLAY_NAME: "NghiMe NghiASR Vietnamese"
+      MODEL_ATTRIBUTION_NAME: "NghiMe"
+      MODEL_ATTRIBUTION_URL: "https://huggingface.co/NghiMe/NghiASR"
+      HF_MODEL_ID: "NghiMe/NghiASR"
+      MODEL_DIR: "/app/model"
+      NUM_THREADS: "4"
+    ports:
+      - "10401:10401"
+    volumes:
+      - ./model-nghiasr:/app/model   # volume riêng, tránh conflict
+      - ./config-nghiasr:/app/config
+```
 
-### API REST (cho Xiaozzi và tích hợp ngoài)
+### Chế độ FastAPI
+
+```yaml
+services:
+  fastapi-asr:
+    build: .
+    container_name: vietnamese-asr-api
+    restart: unless-stopped
+    environment:
+      MODE: "fastapi"
+      API_PORT: "8090"
+      MODEL_DIR: "/app/model"
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./model:/app/model
+      - ./config:/app/config
+```
+
+### Build Image
 
 ```bash
-# Gửi file audio để nhận dạng
-curl -X POST "http://localhost:8090/transcribe" \
-  -H "Content-Type: audio/wav" \
-  --data-binary @audio.wav
-
-# Response
-{
-  "text": "Xin chào thế giới",
-  "duration": 2.5
-}
+docker build -t wyoming-vietnamese-asr .
 ```
+
+&gt; **Lưu ý**: `sherpa-onnx` được cài từ pre-built wheel trên PyPI — **không cần cmake hay build tools** trong runtime.
+
+---
+
+## 🌐 Các Endpoint FastAPI
+
+Khi `MODE=fastapi`, server expose các endpoint sau:
+
+| Phương thức | Endpoint | Mô tả |
+|---|---|---|
+| `GET` | `/health` | Kiểm tra trạng thái + metrics |
+| `GET` | `/metrics` | Metrics tương thích Prometheus |
+| `POST` | `/transcribe` | Upload audio → văn bản |
+
+```bash
+# Chuyển đổi file audio
+curl -X POST "http://localhost:8090/transcribe" \
+  -F "audio=@audio.wav"
+
+# Kiểm tra trạng thái
+curl http://localhost:8090/health
+```
+
+---
 
 ## 🏗️ Kiến trúc hệ thống
 
 ```
-┌─────────────────────────────────────────┐
-│  Home Assistant (Trợ lý giọng nói)     │
-│  Wyoming STT Integration                │
-└─────────────────┬───────────────────────┘
-                  │ Wyoming Protocol (TCP)
-                  ▼
-┌─────────────────────────────────────────┐
-│  Wyoming Vietnamese ASR Server          │
-│  Cổng: 10400                            │
-│  Model: Zipformer-30M-RNNT-6000h       │
-│  CPU: 4 threads                         │
-└─────────────────┬───────────────────────┘
-                  │ (tùy chọn)
-                  ▼
-┌─────────────────────────────────────────┐
-│  FastAPI Server                         │
-│  Cổng: 8090 (cho Xiaozzi, REST API)    │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│  Home Assistant (Trợ lý giọng nói)  │
+│  Tích hợp Wyoming STT               │
+└──────────────┬──────────────────────┘
+               │ Giao thức Wyoming (TCP :10400)
+               ▼
+┌─────────────────────────────────────┐
+│       main.py (điểm vào duy nhất)   │
+│  MODE=wyoming → Wyoming Server      │
+│  MODE=fastapi → FastAPI + uvicorn   │
+│                                     │
+│  Config: config.yaml &gt; ENV vars     │
+│  Model: tự động tải từ HF           │
+└──────────────┬──────────────────────┘
+               │ (tùy chọn REST)
+               ▼
+┌─────────────────────────────────────┐
+│  FastAPI Server (:8090)             │
+│  /transcribe  /health  /metrics     │
+└─────────────────────────────────────┘
 ```
-
-## 🐳 Docker Deployment
-
-### Wyoming Server (chính)
-
-```yaml
-services:
-  wyoming:
-    image: gnolnos/wyoming-vietnamese-asr:latest
-    ports:
-      - "10400:10400"
-    volumes:
-      - ./model:/app/model:ro
-    environment:
-      - TZ=Asia/Saigon
-    restart: unless-stopped
-    # Bật GPU (nếu có):
-    # devices:
-    #   - /dev/dri:/dev/dri
-```
-
-### FastAPI Server (cho Xiaozzi)
-
-```yaml
-services:
-  fastapi:
-    image: gnolnos/wyoming-vietnamese-asr:fastapi
-    ports:
-      - "8090:8090"
-    volumes:
-      - ./model:/app/model:ro
-    environment:
-      - TZ=Asia/Saigon
-    restart: unless-stopped
-```
-
-### Docker Compose đầy đủ
-
-```bash
-cd docker
-docker compose up -d
-
-# Kiểm tra trạng thái
-docker compose ps
-
-# Xem log
-docker compose logs -f
-```
-
-## 🔧 Xử lý sự cố
-
-### Kết nối thất bại
-
-**Triệu chứng:** `Connection refused` hoặc `Timeout`
-
-**Giải pháp:**
-```bash
-# Kiểm tra Wyoming server đang chạy
-docker ps | grep wyoming
-
-# Kiểm tra cổng
-netstat -tlnp | grep 10400
-
-# Test kết nối
-nc -zv 192.168.100.150 10400
-```
-
-### Chất lượng nhận dạng kém
-
-**Triệu chứng:** Kết quả sai nhiều, nhận dạng không chính xác
-
-**Giải pháp:**
-1. Đảm bảo audio rõ tiếng Việt, ít tạp âm
-2. Kiểm tra cài đặt microphone trong Home Assistant
-3. Xác nhận model được load đúng
-
-### Hiệu suất chậm
-
-**Triệu chứng:** Độ trễ cao, timeout thường xuyên
-
-**Giải pháp:**
-1. Bật GPU acceleration (NVIDIA)
-2. Tăng bộ nhớ (khuyến nghị 2GB+)
-3. Sử dụng SSD cho file model
-
-## 📈 Benchmark
-
-| Mô hình | WER (%) | Kích thước | Tốc độ |
-|---------|---------|------------|--------|
-| **Zipformer-30M-RNNT-6000h** | **7.97** | 30MB | 0.5x real-time |
-| Whisper Base | 12.5 | 74MB | 1x real-time |
-| Whisper Small | 8.2 | 244MB | 2x real-time |
-
-*Test trên CPU Intel i5-7500T, 4 threads*
-
-## 🔗 Liên kết
-
-- **Repository**: [github.com/gnolnos/Wyoming-Vietnamese-ASR](https://github.com/gnolnos/Wyoming-Vietnamese-ASR)
-- **Docker Hub**: [hub.docker.com/r/gnolnos/wyoming-vietnamese-asr](https://hub.docker.com/r/gnolnos/wyoming-vietnamese-asr)
-- **Model**: [huggingface.co/hynt/Zipformer-30M-RNNT-6000h](https://huggingface.co/hynt/Zipformer-30M-RNNT-6000h)
-- **Home Assistant**: [home-assistant.io/integrations/wyoming](https://www.home-assistant.io/integrations/wyoming/)
-
-## 🤝 Đóng góp
-
-1. Fork repository
-2. Tạo branch mới (`git checkout -b feature/ten-tinh-nang`)
-3. Commit thay đổi (`git commit -m 'Thêm tính năng XYZ'`)
-4. Push lên GitHub (`git push origin feature/ten-tinh-nang`)
-5. Tạo Pull Request
-
-## 📄 Giấy phép
-
-**MIT License** - Xem [LICENSE](LICENSE) để biết chi tiết.
-
-## 👨‍💻 Tác giả
-
-**gnolnos** - [github.com/gnolnos](https://github.com/gnolnos)
 
 ---
 
-**⭐ Nếu dự án hữu ích, hãy star repository để ủng hộ!**
+## 🔧 Xử lý sự cố
+
+### Container `unhealthy`
+
+```bash
+# Xem log healthcheck
+docker inspect --format='{{json .State.Health}}' wyoming-vietnamese-asr | jq
+
+# Xem log container
+docker logs wyoming-vietnamese-asr --tail 50
+```
+
+&gt; **Lưu ý**: Lần đầu khởi động cần tải model (~200-500MB). `start-period=300s` được cấu hình để tránh báo unhealthy sai trong quá trình tải.
+
+### Từ chối kết nối
+
+- Kiểm tra container đang chạy: `docker ps | grep wyoming`
+- Kiểm tra port binding: `docker port wyoming-vietnamese-asr`
+- Kiểm tra quy tắc tường lửa
+
+### Tải model thất bại
+
+```bash
+# Buộc tải lại
+docker run -e FORCE_DOWNLOAD=true ...
+# Hoặc set trong config.yaml: force_download: true
+```
+
+### Lỗi phân quyền (volume mount)
+
+```bash
+sudo chown -R 1000:1000 ./model ./config
+```
+
+### Xác minh danh sách file NghiASR
+
+```bash
+python -c "
+from huggingface_hub import list_repo_files
+for f in list_repo_files('NghiMe/NghiASR'):
+    print(f)
+"
+```
+
+Sau đó cập nhật `required_files` và các file roles trong `config.yaml` cho đúng tên file thực tế.
+
+### Chất lượng nhận dạng kém
+
+- Đảm bảo âm thanh đầu vào là tiếng Việt rõ ràng
+- Kiểm tra cài đặt microphone trong Home Assistant
+- Thử tăng `NUM_THREADS` nếu inference chậm
+
+---
+
+## 🛠️ Phát triển
+
+```bash
+# Build image
+docker build -t wyoming-vietnamese-asr .
+
+# Chạy chế độ Wyoming
+docker run -p 10400:10400 -v ./model:/app/model wyoming-vietnamese-asr
+
+# Chạy chế độ FastAPI
+docker run -p 8090:8090 -e MODE=fastapi -v ./model:/app/model wyoming-vietnamese-asr
+
+# Chạy tests
+python -m pytest tests/
+```
+
+---
+
+## 📄 Giấy phép
+
+Giấy phép MIT — Xem [LICENSE](LICENSE) để biết chi tiết.
+
+---
+
+## 🙏 Ghi công
+
+- **Model 1**: [hynt/Zipformer-30M-RNNT-6000h](https://huggingface.co/hynt/Zipformer-30M-RNNT-6000h)
+- **Model 2**: [NghiMe/NghiASR](https://huggingface.co/NghiMe/NghiASR)
+- **Giao thức Wyoming**: [Home Assistant](https://www.home-assistant.io/integrations/wyoming/)
+- **ASR Engine**: [k2-fsa/sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
+- **Tích hợp**: [gnolnos](https://github.com/gnolnos)

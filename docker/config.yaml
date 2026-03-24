@@ -1,0 +1,43 @@
+# /app/config/config.yaml
+server:
+  host: "0.0.0.0"
+  port: 10400
+  log_level: "INFO"
+
+model:
+  # ── Identity (expose ra Home Assistant) ──────────────────
+  id: "zipformer-vietnamese-30m"
+  display_name: "Zipformer 30M RNNT Vietnamese"
+  description: "Zipformer-30M-RNNT-6000h - WER 7.97% on VLSP2025"
+  attribution_name: "hynt"
+  attribution_url: "https://huggingface.co/hynt/Zipformer-30M-RNNT-6000h"
+  languages:
+    - "vi"
+
+  # ── HuggingFace source ────────────────────────────────────
+  hf_model_id: "hynt/Zipformer-30M-RNNT-6000h"
+  hf_token: ""                  # hoặc set qua env HF_TOKEN
+
+  # ── Local storage ─────────────────────────────────────────
+  model_dir: "/app/model"
+
+  # ── Files cần download (tên thực tế trên HF repo) ─────────
+  # Đây là danh sách file sẽ được verify + download nếu thiếu
+  required_files:
+    - "encoder-epoch-20-avg-10.onnx"
+    - "decoder-epoch-20-avg-10.onnx"
+    - "joiner-epoch-20-avg-10.onnx"
+    - "config.json"              # tokens file, dù tên là config.json
+
+  # ── File roles (map tên file vào vai trò) ─────────────────
+  encoder_file: "encoder-epoch-20-avg-10.onnx"
+  decoder_file: "decoder-epoch-20-avg-10.onnx"
+  joiner_file:  "joiner-epoch-20-avg-10.onnx"
+  tokens_file:  "config.json"   # ← đổi thành "tokens.txt" nếu model khác dùng tên đó
+
+  # ── Runtime ───────────────────────────────────────────────
+  use_int8: false
+  num_threads: 4
+  sample_rate: 16000
+  provider: "cpu"
+  force_download: false

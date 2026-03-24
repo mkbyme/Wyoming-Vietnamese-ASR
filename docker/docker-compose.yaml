@@ -1,8 +1,8 @@
 services:
 
-  wyoming-vietnamese-asr:
-    image: mkbyme/wyoming-vietnamese-asr:1.0.9
-    container_name: wyoming-vietnamese-asr
+  wyoming-tts:
+    image: mkbyme/wyoming-vietnamese-asr:1.0.10
+    container_name: wyoming-tts
     user: "root"
     ports:
       - "10400:10400"
@@ -17,29 +17,35 @@ services:
       PROVIDER: "cpu"
       LOG_LEVEL: "INFO"
     volumes:
-      - ./model:/app/model
+      - ./model/zipformer:/app/model
+      - ./config.yaml:/app/config/config.yaml
     restart: unless-stopped
 
   wyoming-fastapi:
-    image: mkbyme/wyoming-vietnamese-asr:1.0.9
+    image: mkbyme/wyoming-vietnamese-asr:1.0.10
     container_name: wyoming-fastapi
     user: "root"
     ports:
       - "8090:8090"
     environment:
-      MODE: "fastapi"           # ← switch sang FastAPI
-      HF_MODEL_ID: "hynt/Zipformer-30M-RNNT-6000h"
-      HF_TOKEN: ""
-      FORCE_DOWNLOAD: "false"
-      USE_INT8: "false"
-      TOKENS_FILE: "config.json"
-      NUM_THREADS: "4"
-      PROVIDER: "cpu"
-      API_HOST: "0.0.0.0"
-      API_PORT: "8090"
-      LOG_LEVEL: "INFO"
+      # ← switch sang FastAPI
+      MODE: "fastapi"
+      # chỉ định lại model id trong env (vì env -> ghi đè config.yaml)
+      # HF_MODEL_ID: "NghiMe/NghiASR"
+      # HF_TOKEN: ""
+      # FORCE_DOWNLOAD: "false"
+      # USE_INT8: "false"
+      # NUM_THREADS: "4"
+      # PROVIDER: "cpu"
+      # API_HOST: "0.0.0.0"
+      # API_PORT: "8090"
+      # LOG_LEVEL: "INFO"
+      # ENCODER_FILE: "encoder-epoch-4-avg-4.onnx"
+      # DECODER_FILE: "decoder-epoch-4-avg-4.onnx"
+      # JOINER_FILE: "joiner-epoch-4-avg-4.onnx"
+      # TOKENS_FILE: "tokens.txt"
+
     volumes:
-      - ./model:/app/model
-    depends_on:
-      - wyoming-vietnamese-asr
+      - ./model/nghime:/app/model
+      - ./config_nghimestudio.yaml:/app/config/config.yaml
     restart: unless-stopped
