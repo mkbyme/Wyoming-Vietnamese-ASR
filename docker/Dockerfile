@@ -60,7 +60,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /build
 COPY requirements-cuda12.txt requirements.txt
 
-RUN pip install --no-cache-dir --break-system-packages --prefix=/install -r requirements.txt \
+RUN pip install --no-cache-dir --break-system-packages --target=/install -r requirements.txt \
     && SHERPA_SITE="/install/lib/python$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')/site-packages/sherpa_onnx" \
     && echo "📦 Downloading sherpa-onnx GPU .so → ${SHERPA_SITE}" \
     && mkdir -p /tmp/sherpa-gpu \
@@ -84,6 +84,9 @@ ARG VARIANT=cpu
 
 # ✅ Chỉ copy /install — không kéo build tools vào runtime
 COPY --from=builder-selected /install /usr/local
+
+ARG PYTHONPATH=""
+ENV PYTHONPATH="/usr/local/lib/python3.12/site-packages:/usr/local/lib/python3.11/site-packages:${PYTHONPATH}"
 
 WORKDIR /app
 COPY main.py         ./main.py
