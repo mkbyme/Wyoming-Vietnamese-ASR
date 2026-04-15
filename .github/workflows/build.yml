@@ -10,55 +10,247 @@ on:
       - 'docker/**'
       - 'wyoming-vietnamese-asr/**'
       - 'repository.yaml'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Image version (e.g. 1.0.11) — bỏ trống để dùng ref_name'
+        required: false
+        default: ''
+      target:
+        description: 'Build target'
+        required: true
+        default: 'all'
+        type: choice
+        options: [all, cpu, cuda12]
 
+env:
+  GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/wyoming-vietnamese-asr
+  DH_IMAGE:   mkbyme/wyoming-vietnamese-asr
+
+# ══════════════════════════════════════════════
+# JOB 0: Resolve version & target
+# ══════════════════════════════════════════════
 jobs:
-  # Build main application image (for standalone Docker use)
-  build-app:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      target:  ${{ steps.meta.outputs.target }}
+    steps:
+      - name: Resolve version & target
+        id: meta
+        run: |
+          if [[ -n "${{ github.event.inputs.version }}" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="dev-$(echo ${GITHUB_SHA} | cut -c1-7)"
+          fi
+
+          TARGET="${{ github.event.inputs.target }}"
+          TARGET="${TARGET:-all}"
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "target=${TARGET}"   >> $GITHUB_OUTPUT
+          echo "✅ Version: ${VERSION} | Target: ${TARGET}"
+
+  # ══════════════════════════════════════════════
+  # JOB 1: Build CPU — AMD64 (native x86)
+  # ══════════════════════════════════════════════
+  build-cpu-amd64:
+    needs: prepare
+    if: needs.prepare.outputs.target == 'all' || needs.prepare.outputs.target == 'cpu'
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
-    
-    strategy:
-      matrix:
-        arch: [amd64, arm64]
-    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Login to GitHub Container Registry
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Get platform
-        id: platform
-        run: |
-          if [ "${{ matrix.arch }}" = "amd64" ]; then
-            echo "platform=linux/amd64" >> $GITHUB_OUTPUT
-          else
-            echo "platform=linux/arm64" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Build and push app image
+
+      - name: Login DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build CPU amd64
         uses: docker/build-push-action@v5
         with:
-          context: ./docker
-          file: ./docker/Dockerfile
-          push: true
+          context:    ./docker
+          file:       ./docker/Dockerfile
+          platforms:  linux/amd64
+          build-args: VARIANT=cpu
+          push:       true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/wyoming-vietnamese-asr:latest
-            ghcr.io/${{ github.repository_owner }}/wyoming-vietnamese-asr:${{ github.ref_name }}
-            ghcr.io/${{ github.repository_owner }}/wyoming-vietnamese-asr:${{ matrix.arch }}
-          platforms: ${{ steps.platform.outputs.platform }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ${{ env.GHCR_IMAGE }}:${{ needs.prepare.outputs.version }}-cpu-amd64
+            ${{ env.DH_IMAGE }}:${{ needs.prepare.outputs.version }}-cpu-amd64
+          cache-from: type=gha,scope=cpu-amd64
+          cache-to:   type=gha,scope=cpu-amd64,mode=max
+
+  # ══════════════════════════════════════════════
+  # JOB 2: Build CPU — ARM64 (native ARM runner)
+  # ══════════════════════════════════════════════
+  build-cpu-arm64:
+    needs: prepare
+    if: needs.prepare.outputs.target == 'all' || needs.prepare.outputs.target == 'cpu'
+    runs-on: ubuntu-24.04-arm        # ← Native ARM64, không cần QEMU
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build CPU arm64
+        uses: docker/build-push-action@v5
+        with:
+          context:    ./docker
+          file:       ./docker/Dockerfile
+          platforms:  linux/arm64
+          build-args: VARIANT=cpu
+          push:       true
+          tags: |
+            ${{ env.GHCR_IMAGE }}:${{ needs.prepare.outputs.version }}-cpu-arm64
+            ${{ env.DH_IMAGE }}:${{ needs.prepare.outputs.version }}-cpu-arm64
+          cache-from: type=gha,scope=cpu-arm64
+          cache-to:   type=gha,scope=cpu-arm64,mode=max
+
+  # ══════════════════════════════════════════════
+  # JOB 3: Build CUDA12 — AMD64 only
+  # ══════════════════════════════════════════════
+  build-cuda12:
+    needs: prepare
+    if: needs.prepare.outputs.target == 'all' || needs.prepare.outputs.target == 'cuda12'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build CUDA12 amd64
+        uses: docker/build-push-action@v5
+        with:
+          context:    ./docker
+          file:       ./docker/Dockerfile
+          platforms:  linux/amd64
+          build-args: VARIANT=cuda12
+          push:       true
+          tags: |
+            ${{ env.GHCR_IMAGE }}:${{ needs.prepare.outputs.version }}-cuda12
+            ${{ env.DH_IMAGE }}:${{ needs.prepare.outputs.version }}-cuda12
+          cache-from: type=gha,scope=cuda12
+          cache-to:   type=gha,scope=cuda12,mode=max
+
+  # ══════════════════════════════════════════════
+  # JOB 4: Merge CPU manifest (amd64 + arm64)
+  # ══════════════════════════════════════════════
+  merge-cpu-manifest:
+    needs: [prepare, build-cpu-amd64, build-cpu-arm64]
+    if: needs.prepare.outputs.target == 'all' || needs.prepare.outputs.target == 'cpu'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Merge GHCR manifest
+        run: |
+          docker buildx imagetools create \
+            -t ${{ env.GHCR_IMAGE }}:${VERSION}-cpu \
+            -t ${{ env.GHCR_IMAGE }}:${VERSION} \
+            -t ${{ env.GHCR_IMAGE }}:latest \
+            ${{ env.GHCR_IMAGE }}:${VERSION}-cpu-amd64 \
+            ${{ env.GHCR_IMAGE }}:${VERSION}-cpu-arm64
+
+      - name: Merge DockerHub manifest
+        run: |
+          docker buildx imagetools create \
+            -t ${{ env.DH_IMAGE }}:${VERSION}-cpu \
+            -t ${{ env.DH_IMAGE }}:${VERSION} \
+            -t ${{ env.DH_IMAGE }}:latest \
+            ${{ env.DH_IMAGE }}:${VERSION}-cpu-amd64 \
+            ${{ env.DH_IMAGE }}:${VERSION}-cpu-arm64
+
+      - name: Inspect manifest
+        run: |
+          docker buildx imagetools inspect ${{ env.GHCR_IMAGE }}:${VERSION}-cpu
+
+  # ══════════════════════════════════════════════
+  # JOB 5: Summary
+  # ══════════════════════════════════════════════
+  summary:
+    needs: [prepare, merge-cpu-manifest, build-cuda12]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build Summary
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          TARGET="${{ needs.prepare.outputs.target }}"
+          {
+            echo "## 🎉 Build Complete"
+            echo "| Tag | Registry | Platform |"
+            echo "|-----|----------|----------|"
+            if [[ "$TARGET" == "all" || "$TARGET" == "cpu" ]]; then
+              echo "| \`:${VERSION}-cpu\` | GHCR + DockerHub | amd64 + arm64 |"
+              echo "| \`:${VERSION}\`     | GHCR + DockerHub | amd64 + arm64 (default) |"
+              echo "| \`:latest\`         | GHCR + DockerHub | amd64 + arm64 |"
+            fi
+            if [[ "$TARGET" == "all" || "$TARGET" == "cuda12" ]]; then
+              echo "| \`:${VERSION}-cuda12\` | GHCR + DockerHub | amd64 only |"
+            fi
+          } >> $GITHUB_STEP_SUMMARY

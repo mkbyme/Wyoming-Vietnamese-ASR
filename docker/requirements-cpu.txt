@@ -1,0 +1,25 @@
+# Wyoming protocol
+wyoming==1.5.0
+
+# ONNX Runtime - CPU only
+onnxruntime==1.17.1
+
+# sherpa-onnx pre-built wheel
+sherpa-onnx==1.12.32
+
+# Audio
+soundfile==0.12.1
+numpy==1.26.2
+scipy==1.11.4
+
+# FastAPI
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Utils
+requests==2.31.0
+aiofiles==23.2.1
+pydantic==2.5.0
+pyyaml>=6.0
+huggingface_hub[cli]>=0.20.0

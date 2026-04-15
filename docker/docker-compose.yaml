@@ -1,13 +1,13 @@
 services:
 
   wyoming-tts:
-    image: mkbyme/wyoming-vietnamese-asr:1.0.10
+    image: mkbyme/wyoming-vietnamese-asr:1.0.11
     container_name: wyoming-tts
     user: "root"
     ports:
       - "10400:10400"
     environment:
-      MODE: "wyoming"           # ← default, có thể bỏ
+      MODE: "wyoming"
       HF_MODEL_ID: "hynt/Zipformer-30M-RNNT-6000h"
       HF_TOKEN: ""
       FORCE_DOWNLOAD: "false"
@@ -22,30 +22,81 @@ services:
     restart: unless-stopped
 
   wyoming-fastapi:
-    image: mkbyme/wyoming-vietnamese-asr:1.0.10
+    image: mkbyme/wyoming-vietnamese-asr:1.0.11
     container_name: wyoming-fastapi
     user: "root"
     ports:
       - "8090:8090"
     environment:
-      # ← switch sang FastAPI
       MODE: "fastapi"
-      # chỉ định lại model id trong env (vì env -> ghi đè config.yaml)
-      # HF_MODEL_ID: "NghiMe/NghiASR"
-      # HF_TOKEN: ""
-      # FORCE_DOWNLOAD: "false"
-      # USE_INT8: "false"
-      # NUM_THREADS: "4"
-      # PROVIDER: "cpu"
-      # API_HOST: "0.0.0.0"
-      # API_PORT: "8090"
-      # LOG_LEVEL: "INFO"
-      # ENCODER_FILE: "encoder-epoch-4-avg-4.onnx"
-      # DECODER_FILE: "decoder-epoch-4-avg-4.onnx"
-      # JOINER_FILE: "joiner-epoch-4-avg-4.onnx"
-      # TOKENS_FILE: "tokens.txt"
-
     volumes:
       - ./model/nghime:/app/model
       - ./config_nghimestudio.yaml:/app/config/config.yaml
+    restart: unless-stopped
+
+  # ══════════════════════════════════════════
+  # NVIDIA GPU variant
+  # Yêu cầu: image cuda12 + NVIDIA Container Toolkit
+  # ══════════════════════════════════════════
+
+  wyoming-tts-gpu:
+    image: mkbyme/wyoming-vietnamese-asr:1.0.11-cuda12
+    container_name: wyoming-tts-gpu
+    user: "root"
+    ports:
+      - "8091:8090"                    # ← port khác để không conflict
+    environment:
+      MODE: "fastapi"
+      HF_MODEL_ID: "hynt/Zipformer-30M-RNNT-6000h"
+      HF_TOKEN: ""
+      FORCE_DOWNLOAD: "false"
+      USE_INT8: "true"                 # ← int8 + cuda = nhanh nhất
+      TOKENS_FILE: "config.json"
+      NUM_THREADS: "2"                 # ← GPU rồi, CPU thread ít thôi
+      PROVIDER: "cuda"                 # ← KEY: enable CUDA
+      API_HOST: "0.0.0.0"
+      API_PORT: "8090"
+      LOG_LEVEL: "INFO"
+    volumes:
+      - ./model/zipformer:/app/model
+      - ./config.yaml:/app/config/config.yaml
+    # ── GPU config ──────────────────────────
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1                 # số GPU muốn dùng (all = dùng hết)
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  wyoming-fastapi-gpu:
+    image: mkbyme/wyoming-vietnamese-asr:1.0.11-cuda12
+    container_name: wyoming-fastapi-gpu
+    user: "root"
+    ports:
+      - "10401:10400"                    # ← port khác để không conflict
+    environment:
+      MODE: "wyoming"
+      HF_MODEL_ID: "hynt/Zipformer-30M-RNNT-6000h"
+      HF_TOKEN: ""
+      FORCE_DOWNLOAD: "false"
+      USE_INT8: "true"                 # ← int8 + cuda = nhanh nhất
+      TOKENS_FILE: "config.json"
+      NUM_THREADS: "2"                 # ← GPU rồi, CPU thread ít thôi
+      PROVIDER: "cuda"                 # ← KEY: enable CUDA
+      API_HOST: "0.0.0.0"
+      API_PORT: "8090"
+      LOG_LEVEL: "INFO"
+    volumes:
+      - ./model/zipformer:/app/model
+      - ./config.yaml:/app/config/config.yaml
+    # ── GPU config ──────────────────────────
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1                 # số GPU muốn dùng (all = dùng hết)
+              capabilities: [gpu]
     restart: unless-stopped
