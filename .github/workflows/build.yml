@@ -25,7 +25,7 @@ on:
       registry:
         description: 'Push to registry'
         required: true
-        default: 'both'
+        default: 'ghcr'
         type: choice
         options: [both, ghcr, dockerhub]
 
