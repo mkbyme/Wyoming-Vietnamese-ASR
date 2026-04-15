@@ -323,13 +323,13 @@ jobs:
             echo "| Tag | Registry | Platform |"
             echo "|-----|----------|----------|"
             if [[ "$TARGET" == "all" || "$TARGET" == "cpu" ]]; then
-              [[ "$PUSH_GHCR" == "true" ]] && echo "| \`ghcr.io/.../:${VERSION}-cpu\` | GHCR | amd64 + arm64 |"
-              [[ "$PUSH_GHCR" == "true" ]] && echo "| \`ghcr.io/...:latest\` | GHCR | amd64 + arm64 |"
-              [[ "$PUSH_DH"   == "true" ]] && echo "| \`mkbyme/.../:${VERSION}-cpu\` | DockerHub | amd64 + arm64 |"
-              [[ "$PUSH_DH"   == "true" ]] && echo "| \`mkbyme/...:latest\` | DockerHub | amd64 + arm64 |"
+              [[ "$PUSH_GHCR" == "true" ]] && echo "| \`ghcr.io/.../:${VERSION}-cpu\` | GHCR | amd64 + arm64 |" || true
+              [[ "$PUSH_GHCR" == "true" ]] && echo "| \`ghcr.io/...:latest\` | GHCR | amd64 + arm64 |" || true
+              [[ "$PUSH_DH"   == "true" ]] && echo "| \`mkbyme/.../:${VERSION}-cpu\` | DockerHub | amd64 + arm64 |" || true
+              [[ "$PUSH_DH"   == "true" ]] && echo "| \`mkbyme/...:latest\` | DockerHub | amd64 + arm64 |" || true
             fi
             if [[ "$TARGET" == "all" || "$TARGET" == "cuda12" ]]; then
-              [[ "$PUSH_GHCR" == "true" ]] && echo "| \`ghcr.io/.../:${VERSION}-cuda12\` | GHCR | amd64 only |"
-              [[ "$PUSH_DH"   == "true" ]] && echo "| \`mkbyme/.../:${VERSION}-cuda12\` | DockerHub | amd64 only |"
+              [[ "$PUSH_GHCR" == "true" ]] && echo "| \`ghcr.io/.../:${VERSION}-cuda12\` | GHCR | amd64 only |" || true
+              [[ "$PUSH_DH"   == "true" ]] && echo "| \`mkbyme/.../:${VERSION}-cuda12\` | DockerHub | amd64 only |" || true
             fi
           } >> $GITHUB_STEP_SUMMARY
