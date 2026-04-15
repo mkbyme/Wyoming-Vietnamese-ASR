@@ -22,22 +22,31 @@ on:
         default: 'all'
         type: choice
         options: [all, cpu, cuda12]
+      registry:
+        description: 'Push to registry'
+        required: true
+        default: 'both'
+        type: choice
+        options: [both, ghcr, dockerhub]
 
 env:
   GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/wyoming-vietnamese-asr
   DH_IMAGE:   mkbyme/wyoming-vietnamese-asr
 
-# ══════════════════════════════════════════════
-# JOB 0: Resolve version & target
-# ══════════════════════════════════════════════
 jobs:
+  # ══════════════════════════════════════════════
+  # JOB 0: Resolve version, target, registry
+  # ══════════════════════════════════════════════
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.meta.outputs.version }}
-      target:  ${{ steps.meta.outputs.target }}
+      version:   ${{ steps.meta.outputs.version }}
+      target:    ${{ steps.meta.outputs.target }}
+      registry:  ${{ steps.meta.outputs.registry }}
+      push_ghcr: ${{ steps.meta.outputs.push_ghcr }}
+      push_dh:   ${{ steps.meta.outputs.push_dh }}
     steps:
-      - name: Resolve version & target
+      - name: Resolve version, target & registry
         id: meta
         run: |
           if [[ -n "${{ github.event.inputs.version }}" ]]; then
@@ -51,12 +60,21 @@ jobs:
           TARGET="${{ github.event.inputs.target }}"
           TARGET="${TARGET:-all}"
 
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "target=${TARGET}"   >> $GITHUB_OUTPUT
-          echo "✅ Version: ${VERSION} | Target: ${TARGET}"
+          REGISTRY="${{ github.event.inputs.registry }}"
+          REGISTRY="${REGISTRY:-both}"
+
+          [[ "$REGISTRY" == "both" || "$REGISTRY" == "ghcr" ]]       && PUSH_GHCR="true" || PUSH_GHCR="false"
+          [[ "$REGISTRY" == "both" || "$REGISTRY" == "dockerhub" ]]  && PUSH_DH="true"   || PUSH_DH="false"
+
+          echo "version=${VERSION}"     >> $GITHUB_OUTPUT
+          echo "target=${TARGET}"       >> $GITHUB_OUTPUT
+          echo "registry=${REGISTRY}"   >> $GITHUB_OUTPUT
+          echo "push_ghcr=${PUSH_GHCR}" >> $GITHUB_OUTPUT
+          echo "push_dh=${PUSH_DH}"     >> $GITHUB_OUTPUT
+          echo "✅ Version: ${VERSION} | Target: ${TARGET} | Registry: ${REGISTRY}"
 
   # ══════════════════════════════════════════════
-  # JOB 1: Build CPU — AMD64 (native x86)
+  # JOB 1: Build CPU — AMD64
   # ══════════════════════════════════════════════
   build-cpu-amd64:
     needs: prepare
@@ -67,10 +85,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
 
       - name: Login GHCR
+        if: needs.prepare.outputs.push_ghcr == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -78,41 +96,56 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login DockerHub
+        if: needs.prepare.outputs.push_dh == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build CPU amd64
+      - name: Build CPU amd64 → GHCR
+        if: needs.prepare.outputs.push_ghcr == 'true'
         uses: docker/build-push-action@v5
         with:
           context:    ./docker
           file:       ./docker/Dockerfile
           platforms:  linux/amd64
+          target:     runtime
           build-args: VARIANT=cpu
           push:       true
-          tags: |
-            ${{ env.GHCR_IMAGE }}:${{ needs.prepare.outputs.version }}-cpu-amd64
-            ${{ env.DH_IMAGE }}:${{ needs.prepare.outputs.version }}-cpu-amd64
+          tags:       ${{ env.GHCR_IMAGE }}:${{ needs.prepare.outputs.version }}-cpu-amd64
+          cache-from: type=gha,scope=cpu-amd64
+          cache-to:   type=gha,scope=cpu-amd64,mode=max
+
+      - name: Build CPU amd64 → DockerHub
+        if: needs.prepare.outputs.push_dh == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context:    ./docker
+          file:       ./docker/Dockerfile
+          platforms:  linux/amd64
+          target:     runtime
+          build-args: VARIANT=cpu
+          push:       true
+          tags:       ${{ env.DH_IMAGE }}:${{ needs.prepare.outputs.version }}-cpu-amd64
           cache-from: type=gha,scope=cpu-amd64
           cache-to:   type=gha,scope=cpu-amd64,mode=max
 
   # ══════════════════════════════════════════════
-  # JOB 2: Build CPU — ARM64 (native ARM runner)
+  # JOB 2: Build CPU — ARM64
   # ══════════════════════════════════════════════
   build-cpu-arm64:
     needs: prepare
     if: needs.prepare.outputs.target == 'all' || needs.prepare.outputs.target == 'cpu'
-    runs-on: ubuntu-24.04-arm        # ← Native ARM64, không cần QEMU
+    runs-on: ubuntu-24.04-arm
     permissions:
       packages: write
       contents: read
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
 
       - name: Login GHCR
+        if: needs.prepare.outputs.push_ghcr == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -120,22 +153,37 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login DockerHub
+        if: needs.prepare.outputs.push_dh == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build CPU arm64
+      - name: Build CPU arm64 → GHCR
+        if: needs.prepare.outputs.push_ghcr == 'true'
         uses: docker/build-push-action@v5
         with:
           context:    ./docker
           file:       ./docker/Dockerfile
           platforms:  linux/arm64
+          target:     runtime
           build-args: VARIANT=cpu
           push:       true
-          tags: |
-            ${{ env.GHCR_IMAGE }}:${{ needs.prepare.outputs.version }}-cpu-arm64
-            ${{ env.DH_IMAGE }}:${{ needs.prepare.outputs.version }}-cpu-arm64
+          tags:       ${{ env.GHCR_IMAGE }}:${{ needs.prepare.outputs.version }}-cpu-arm64
+          cache-from: type=gha,scope=cpu-arm64
+          cache-to:   type=gha,scope=cpu-arm64,mode=max
+
+      - name: Build CPU arm64 → DockerHub
+        if: needs.prepare.outputs.push_dh == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context:    ./docker
+          file:       ./docker/Dockerfile
+          platforms:  linux/arm64
+          target:     runtime
+          build-args: VARIANT=cpu
+          push:       true
+          tags:       ${{ env.DH_IMAGE }}:${{ needs.prepare.outputs.version }}-cpu-arm64
           cache-from: type=gha,scope=cpu-arm64
           cache-to:   type=gha,scope=cpu-arm64,mode=max
 
@@ -151,10 +199,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
 
       - name: Login GHCR
+        if: needs.prepare.outputs.push_ghcr == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -162,22 +210,37 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login DockerHub
+        if: needs.prepare.outputs.push_dh == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build CUDA12 amd64
+      - name: Build CUDA12 amd64 → GHCR
+        if: needs.prepare.outputs.push_ghcr == 'true'
         uses: docker/build-push-action@v5
         with:
           context:    ./docker
           file:       ./docker/Dockerfile
           platforms:  linux/amd64
+          target:     runtime
           build-args: VARIANT=cuda12
           push:       true
-          tags: |
-            ${{ env.GHCR_IMAGE }}:${{ needs.prepare.outputs.version }}-cuda12
-            ${{ env.DH_IMAGE }}:${{ needs.prepare.outputs.version }}-cuda12
+          tags:       ${{ env.GHCR_IMAGE }}:${{ needs.prepare.outputs.version }}-cuda12
+          cache-from: type=gha,scope=cuda12
+          cache-to:   type=gha,scope=cuda12,mode=max
+
+      - name: Build CUDA12 amd64 → DockerHub
+        if: needs.prepare.outputs.push_dh == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context:    ./docker
+          file:       ./docker/Dockerfile
+          platforms:  linux/amd64
+          target:     runtime
+          build-args: VARIANT=cuda12
+          push:       true
+          tags:       ${{ env.DH_IMAGE }}:${{ needs.prepare.outputs.version }}-cuda12
           cache-from: type=gha,scope=cuda12
           cache-to:   type=gha,scope=cuda12,mode=max
 
@@ -195,6 +258,7 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
       - name: Login GHCR
+        if: needs.prepare.outputs.push_ghcr == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -202,12 +266,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login DockerHub
+        if: needs.prepare.outputs.push_dh == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Merge GHCR manifest
+        if: needs.prepare.outputs.push_ghcr == 'true'
         run: |
           docker buildx imagetools create \
             -t ${{ env.GHCR_IMAGE }}:${VERSION}-cpu \
@@ -217,6 +283,7 @@ jobs:
             ${{ env.GHCR_IMAGE }}:${VERSION}-cpu-arm64
 
       - name: Merge DockerHub manifest
+        if: needs.prepare.outputs.push_dh == 'true'
         run: |
           docker buildx imagetools create \
             -t ${{ env.DH_IMAGE }}:${VERSION}-cpu \
@@ -226,8 +293,8 @@ jobs:
             ${{ env.DH_IMAGE }}:${VERSION}-cpu-arm64
 
       - name: Inspect manifest
-        run: |
-          docker buildx imagetools inspect ${{ env.GHCR_IMAGE }}:${VERSION}-cpu
+        if: needs.prepare.outputs.push_ghcr == 'true'
+        run: docker buildx imagetools inspect ${{ env.GHCR_IMAGE }}:${VERSION}-cpu
 
   # ══════════════════════════════════════════════
   # JOB 5: Summary
@@ -241,16 +308,28 @@ jobs:
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
           TARGET="${{ needs.prepare.outputs.target }}"
+          REGISTRY="${{ needs.prepare.outputs.registry }}"
+          PUSH_GHCR="${{ needs.prepare.outputs.push_ghcr }}"
+          PUSH_DH="${{ needs.prepare.outputs.push_dh }}"
           {
             echo "## 🎉 Build Complete"
+            echo "| Key | Value |"
+            echo "|-----|-------|"
+            echo "| **Version** | \`${VERSION}\` |"
+            echo "| **Target** | \`${TARGET}\` |"
+            echo "| **Registry** | \`${REGISTRY}\` |"
+            echo ""
+            echo "### 📦 Tags pushed"
             echo "| Tag | Registry | Platform |"
             echo "|-----|----------|----------|"
             if [[ "$TARGET" == "all" || "$TARGET" == "cpu" ]]; then
-              echo "| \`:${VERSION}-cpu\` | GHCR + DockerHub | amd64 + arm64 |"
-              echo "| \`:${VERSION}\`     | GHCR + DockerHub | amd64 + arm64 (default) |"
-              echo "| \`:latest\`         | GHCR + DockerHub | amd64 + arm64 |"
+              [[ "$PUSH_GHCR" == "true" ]] && echo "| \`ghcr.io/.../:${VERSION}-cpu\` | GHCR | amd64 + arm64 |"
+              [[ "$PUSH_GHCR" == "true" ]] && echo "| \`ghcr.io/...:latest\` | GHCR | amd64 + arm64 |"
+              [[ "$PUSH_DH"   == "true" ]] && echo "| \`mkbyme/.../:${VERSION}-cpu\` | DockerHub | amd64 + arm64 |"
+              [[ "$PUSH_DH"   == "true" ]] && echo "| \`mkbyme/...:latest\` | DockerHub | amd64 + arm64 |"
             fi
             if [[ "$TARGET" == "all" || "$TARGET" == "cuda12" ]]; then
-              echo "| \`:${VERSION}-cuda12\` | GHCR + DockerHub | amd64 only |"
+              [[ "$PUSH_GHCR" == "true" ]] && echo "| \`ghcr.io/.../:${VERSION}-cuda12\` | GHCR | amd64 only |"
+              [[ "$PUSH_DH"   == "true" ]] && echo "| \`mkbyme/.../:${VERSION}-cuda12\` | DockerHub | amd64 only |"
             fi
           } >> $GITHUB_STEP_SUMMARY
