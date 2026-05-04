@@ -22,6 +22,13 @@ logging.basicConfig(
 )
 _LOGGER = logging.getLogger(__name__)
 
+def _normalize_text(text: str) -> str:
+    """Convert ASR output to proper casing and suppress noise during silence."""
+    text = text.strip()
+    if len(text) < 5:
+        return ""
+    return text.capitalize()
+
 MODEL_DIR = Path("/app/model")
 ENCODER_PATH = MODEL_DIR / "encoder-epoch-20-avg-10.onnx"
 DECODER_PATH = MODEL_DIR / "decoder-epoch-20-avg-10.onnx"
@@ -129,7 +136,7 @@ class VietnameseASREventHandler(AsyncEventHandler):
                 recognizer.decode_stream(stream)
                 result = stream.result
                 
-                text = result.text.strip()
+                text = _normalize_text(result.text)
                 _LOGGER.info(f"Transcription result: '{text}'")
                 
                 await self.write_event(Transcript(text=text).event())
@@ -154,7 +161,7 @@ class VietnameseASREventHandler(AsyncEventHandler):
                     recognizer.decode_stream(stream)
                     result = stream.result
                     
-                    text = result.text.strip()
+                    text = _normalize_text(result.text)
                     _LOGGER.info(f"Transcription result: '{text}'")
                     await self.write_event(Transcript(text=text).event())
                 except Exception as e:

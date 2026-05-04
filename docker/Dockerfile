@@ -43,8 +43,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /build
 COPY requirements-cpu.txt requirements.txt
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch==2.5.1+cpu
 
+RUN pip install --no-cache-dir --prefix=/install \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    -r requirements.txt
 # ──────────────────────────────────────────────
 # BUILDER: CUDA12
 # ──────────────────────────────────────────────
@@ -92,6 +97,7 @@ WORKDIR /app
 COPY main.py         ./main.py
 COPY healthcheck.py  ./healthcheck.py
 COPY config.yaml     ./config/config.yaml
+COPY snakers4_silero-vad/src/silero_vad/data/silero_vad.onnx ./vad/silero_vad.onnx
 
 RUN mkdir -p /app/models /app/config
 

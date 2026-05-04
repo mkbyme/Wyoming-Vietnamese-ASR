@@ -24,11 +24,16 @@ import sherpa_onnx
 # Helpers
 # ─────────────────────────────────────────────
 def _normalize_text(text: str) -> str:
-    """Convert ASR output to proper casing and suppress noise during silence"""
+    """Normalize ASR output: filter noise, capitalize, restore punctuation."""
     text = text.strip()
     if len(text) < 5:
         return ""
-    return text.capitalize()
+    if _CAPU is not None:
+        # capitalize() fixes ASR ALL-CAPS output before Capu processes it
+        text = _CAPU.restore(text.capitalize())
+    else:
+        text = text.capitalize()
+    return text
 
 def _get_bool(key: str, default: bool = False) -> bool:
     return os.environ.get(key, str(default)).lower() in ("1", "true", "yes")
@@ -36,6 +41,12 @@ def _get_bool(key: str, default: bool = False) -> bool:
 def _get_int(key: str, default: int) -> int:
     try:
         return int(os.environ.get(key, default))
+    except (ValueError, TypeError):
+        return default
+
+def _get_float(key: str, default: float) -> float:
+    try:
+        return float(os.environ.get(key, default))
     except (ValueError, TypeError):
         return default
 
@@ -51,6 +62,96 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 _LOGGER = logging.getLogger(__name__)
+
+# ─────────────────────────────────────────────
+# Silero VAD Filter (lightweight, ONNX, no torch)
+# ─────────────────────────────────────────────
+class VADFilter:
+    """Lightweight Silero VAD using ONNX runtime — no PyTorch dependency.
+
+    Model: silero_vad.onnx (~1.5 MB)
+    Input:  512-sample float32 frames @ 16 kHz (32 ms/frame)
+    Output: speech probability per frame + LSTM hidden state
+    """
+
+    def __init__(self, model_path: str, threshold: float = 0.5, min_speech_frames: int = 3):
+        import onnxruntime
+        opts = onnxruntime.SessionOptions()
+        opts.inter_op_num_threads = 1
+        opts.intra_op_num_threads = 1
+        self.session = onnxruntime.InferenceSession(
+            model_path, providers=["CPUExecutionProvider"], sess_options=opts,
+        )
+        self.threshold = threshold
+        self.min_speech_frames = min_speech_frames
+        self._reset_states()
+
+    def _reset_states(self):
+        self._state = np.zeros((2, 1, 128), dtype=np.float32)
+        self._context = np.zeros((1, 64), dtype=np.float32)
+
+    def has_speech(self, audio: np.ndarray, sample_rate: int = 16000) -> bool:
+        """Return True if any segment of *audio* contains speech."""
+        self._reset_states()
+        frame_size = 512
+        speech_frames = 0
+
+        for start in range(0, len(audio) - frame_size + 1, frame_size):
+            chunk = audio[start : start + frame_size]
+            prob = self._run_frame(chunk, sample_rate)
+            if prob >= self.threshold:
+                speech_frames += 1
+                if speech_frames >= self.min_speech_frames:
+                    return True
+            else:
+                speech_frames = 0
+        return False
+
+    def _run_frame(self, x: np.ndarray, sr: int) -> float:
+        x_input = np.concatenate([self._context[0], x]).reshape(1, -1)
+        ort_inputs = {
+            "input": x_input.astype(np.float32),
+            "state": self._state,
+            "sr": np.array(sr, dtype=np.int64),
+        }
+        out, self._state = self.session.run(None, ort_inputs)
+        self._context = x_input[:, -64:]
+        return float(out[0, 0])
+
+# ─────────────────────────────────────────────
+# Capu — Punctuation & Capitalization Restoration
+# Model: dragonSwing/xlm-roberta-capu (XLM-RoBERTa, ~1.1 GB)
+# ─────────────────────────────────────────────
+class CapuFilter:
+    """Restore punctuation (. , : ?) and proper capitalization for Vietnamese text."""
+
+    def __init__(self, model_dir: str, device: str = "cpu"):
+        import sys
+        self.model_dir = model_dir
+        if model_dir not in sys.path:
+            sys.path.insert(0, model_dir)
+        from gec_model import GecBERTModel
+
+        self.model = GecBERTModel(
+            vocab_path=os.path.join(model_dir, "vocabulary"),
+            model_paths=model_dir,
+            split_chunk=True,
+            device=device,
+        )
+        # warm-up
+        _ = self.model("xin chào")
+
+    def restore(self, text: str) -> str:
+        if not text:
+            return text
+        try:
+            results = self.model(text)
+            restored = results[0].strip() if results else text
+            _LOGGER.info("Capu: '%s' → '%s'", text, restored)
+            return restored
+        except Exception:
+            _LOGGER.warning("Capu restore failed, returning original", exc_info=True)
+            return text
 
 # ─────────────────────────────────────────────
 # ModelConfig
@@ -125,6 +226,15 @@ def _env_fallback() -> tuple[dict, ModelConfig]:
         "api_port":  _get_int("API_PORT", 8090),
         "log_level": os.environ.get("LOG_LEVEL", "INFO").upper(),
         "mode":      os.environ.get("MODE", "wyoming").lower(),
+        "vad": {
+            "threshold":          _get_float("VAD_THRESHOLD", 0.5),
+            "min_speech_frames":  _get_int("VAD_MIN_SPEECH_FRAMES", 3),
+        },
+        "capu": {
+            "enabled":   os.environ.get("CAPU_ENABLED", "true"),
+            "model_dir": os.environ.get("CAPU_MODEL_DIR", "/app/capu"),
+            "device":    os.environ.get("CAPU_DEVICE", "cpu"),
+        },
     }
 
     model_cfg = ModelConfig(
@@ -167,6 +277,7 @@ def load_config() -> tuple[dict, ModelConfig]:
 
     srv = raw.get("server", {})
     m   = raw.get("model", {})
+    vad = raw.get("vad", {})
 
     server_cfg = {
         "host":      os.environ.get("SERVER_HOST",  str(srv.get("host",      "0.0.0.0"))),
@@ -175,6 +286,15 @@ def load_config() -> tuple[dict, ModelConfig]:
         "api_port":  int(os.environ.get("API_PORT",     srv.get("api_port",  8090))),
         "log_level": os.environ.get("LOG_LEVEL",    str(srv.get("log_level", "INFO"))).upper(),
         "mode":      os.environ.get("MODE",         str(srv.get("mode",      "wyoming"))).lower(),
+        "vad": {
+            "threshold":          _get_float("VAD_THRESHOLD",         vad.get("threshold", 0.5)),
+            "min_speech_frames":  _get_int("VAD_MIN_SPEECH_FRAMES",   vad.get("min_speech_frames", 3)),
+        },
+        "capu": {
+            "enabled":   os.environ.get("CAPU_ENABLED",   str(raw.get("capu", {}).get("enabled", "true"))),
+            "model_dir": os.environ.get("CAPU_MODEL_DIR", str(raw.get("capu", {}).get("model_dir", "/app/capu"))),
+            "device":    os.environ.get("CAPU_DEVICE",    str(raw.get("capu", {}).get("device", "cpu"))),
+        },
     }
 
     use_int8     = _get_bool("USE_INT8", m.get("use_int8", False))
@@ -325,6 +445,8 @@ def load_model(cfg: ModelConfig):
 # ─────────────────────────────────────────────
 _MODEL_CFG: Optional[ModelConfig] = None
 _SERVER_CFG: dict = {}
+_VAD: Optional[VADFilter] = None
+_CAPU: Optional[CapuFilter] = None
 
 # ─────────────────────────────────────────────
 # ══════════════════════════════════════════════
@@ -354,6 +476,14 @@ def _run_wyoming():
             )
             if self.channels > 1:
                 audio_data = audio_data.reshape(-1, self.channels).mean(axis=1)
+
+            # VAD pre-check — skip heavy ASR if no speech detected
+            if _VAD is not None:
+                if not _VAD.has_speech(audio_data, self.sample_rate):
+                    _LOGGER.info("VAD: no speech → skipping ASR")
+                    return ""
+                _LOGGER.info("VAD: speech detected → running ASR")
+
             stream = _MODEL_CFG.recognizer.create_stream()
             stream.accept_waveform(self.sample_rate, audio_data)
             _MODEL_CFG.recognizer.decode_stream(stream)
@@ -579,6 +709,15 @@ def _run_fastapi():
             audio_data = audio_data.astype(np.float32)
             duration   = len(audio_data) / cfg.sample_rate
 
+            # VAD pre-check — skip heavy ASR if no speech detected
+            if _VAD is not None:
+                if not _VAD.has_speech(audio_data, cfg.sample_rate):
+                    _LOGGER.info("VAD: no speech → skipping ASR")
+                    _metrics["requests_success"] += 1
+                    return {"text": "", "duration": round(duration, 3),
+                            "inference_ms": 0, "rtf": 0, "vad_filtered": True}
+                _LOGGER.info("VAD: speech detected → running ASR")
+
             # Inference
             t_start  = time.perf_counter()
             stream   = cfg.recognizer.create_stream()
@@ -627,7 +766,7 @@ def _run_fastapi():
 # Entry Point
 # ─────────────────────────────────────────────
 def main():
-    global _MODEL_CFG, _SERVER_CFG
+    global _MODEL_CFG, _SERVER_CFG, _VAD, _CAPU
 
     _LOGGER.info("🚀 Starting ASR Server")
 
@@ -651,7 +790,67 @@ def main():
     load_model(model_cfg)
     _MODEL_CFG = model_cfg
 
-        # Step 3: Branch theo MODE
+    # Step 2.5: Init VAD (optional — skipped if model not found)
+    vad_cfg = _SERVER_CFG.get("vad", {})
+    vad_model_path = Path(
+        os.environ.get("VAD_MODEL_PATH", "/app/vad/silero_vad.onnx")
+    )
+    if vad_model_path.exists():
+        _VAD = VADFilter(
+            str(vad_model_path),
+            threshold=vad_cfg.get("threshold", 0.5),
+            min_speech_frames=vad_cfg.get("min_speech_frames", 3),
+        )
+        _LOGGER.info(
+            f"✅ VAD enabled: threshold={_VAD.threshold}, "
+            f"min_speech_frames={_VAD.min_speech_frames}"
+        )
+    else:
+        _LOGGER.info(f"ℹ️  VAD disabled — model not found at {vad_model_path}")
+
+    # Step 2.6: Init Capu — punctuation & capitalization restoration
+    capu_cfg = _SERVER_CFG.get("capu", {})
+    capu_enabled = os.environ.get(
+        "CAPU_ENABLED", str(capu_cfg.get("enabled", "true"))
+    ).lower() in ("1", "true", "yes")
+    if capu_enabled:
+        capu_model_dir = Path(
+            os.environ.get("CAPU_MODEL_DIR", capu_cfg.get("model_dir", "/app/capu"))
+        )
+        capu_device = os.environ.get("CAPU_DEVICE", capu_cfg.get("device", "cpu"))
+        if not capu_model_dir.exists() or not (capu_model_dir / "pytorch_model.bin").exists():
+            _LOGGER.info(f"📥 Downloading Capu model → {capu_model_dir}")
+            from huggingface_hub import snapshot_download as _snap
+            _snap(
+                repo_id="dragonSwing/xlm-roberta-capu",
+                local_dir=str(capu_model_dir),
+            )
+        # ── Patch modeling_seq2labels.py ──────────────────
+        # Phiên bản transformers mới yêu cầu @dataclass trên ModelOutput subclass
+        _modeling_file = capu_model_dir / "modeling_seq2labels.py"
+        if _modeling_file.exists():
+            _content = _modeling_file.read_text(encoding="utf-8")
+            if "@dataclass" not in _content:
+                _content = _content.replace(
+                    "from transformers.modeling_outputs import ModelOutput",
+                    "from dataclasses import dataclass\nfrom transformers.modeling_outputs import ModelOutput",
+                )
+                _content = _content.replace(
+                    "class Seq2LabelsOutput(ModelOutput):",
+                    "@dataclass\nclass Seq2LabelsOutput(ModelOutput):",
+                )
+                _modeling_file.write_text(_content, encoding="utf-8")
+                _LOGGER.info("🔧 Patched modeling_seq2labels.py for transformers compat")
+        try:
+            _CAPU = CapuFilter(str(capu_model_dir), device=capu_device)
+            _LOGGER.info(f"✅ Capu enabled (device={capu_device}): {capu_model_dir}")
+        except Exception as e:
+            _LOGGER.warning(f"⚠️  Capu init failed: {e} → continuing without punctuation")
+            _CAPU = None
+    else:
+        _LOGGER.info("ℹ️  Capu disabled")
+
+    # Step 3: Branch theo MODE
     if mode == "fastapi":
         _LOGGER.info(
             f"🌐 Starting FastAPI on "
