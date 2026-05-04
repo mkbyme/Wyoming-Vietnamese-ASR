@@ -16,9 +16,14 @@ services:
       NUM_THREADS: "4"
       PROVIDER: "cpu"
       LOG_LEVEL: "INFO"
+      VAD_THRESHOLD: "0.5"          # Ngưỡng phát hiện giọng nói (0-1), càng cao càng khắt khe
+      VAD_MIN_SPEECH_FRAMES: "3"    # Số frame liên tiếp có speech để xác nhận (512 mẫu/frame = 32ms)
+      CAPU_ENABLED: "true"          # Bật/tắt tự động sửa câu
+      CAPU_DEVICE: "cpu"
     volumes:
       - ./model/zipformer:/app/model
       - ./config.yaml:/app/config/config.yaml
+      - ./model/capu:/app/capu        # cache model Capu (~1.1 GB)
     restart: unless-stopped
 
   wyoming-fastapi:
@@ -29,9 +34,14 @@ services:
       - "8090:8090"
     environment:
       MODE: "fastapi"
+      VAD_THRESHOLD: "0.5"
+      VAD_MIN_SPEECH_FRAMES: "3"
+      CAPU_ENABLED: "true"
+      CAPU_DEVICE: "cpu"
     volumes:
       - ./model/nghime:/app/model
       - ./config_nghimestudio.yaml:/app/config/config.yaml
+      - ./model/capu:/app/capu
     restart: unless-stopped
 
   # ══════════════════════════════════════════
@@ -57,9 +67,14 @@ services:
       API_HOST: "0.0.0.0"
       API_PORT: "8090"
       LOG_LEVEL: "INFO"
+      VAD_THRESHOLD: "0.5"
+      VAD_MIN_SPEECH_FRAMES: "3"
+      CAPU_ENABLED: "true"
+      CAPU_DEVICE: "cuda"
     volumes:
       - ./model/zipformer:/app/model
       - ./config.yaml:/app/config/config.yaml
+      - ./model/capu:/app/capu
     # ── GPU config ──────────────────────────
     deploy:
       resources:
@@ -88,9 +103,14 @@ services:
       API_HOST: "0.0.0.0"
       API_PORT: "8090"
       LOG_LEVEL: "INFO"
+      VAD_THRESHOLD: "0.5"
+      VAD_MIN_SPEECH_FRAMES: "3"
+      CAPU_ENABLED: "true"
+      CAPU_DEVICE: "cuda"
     volumes:
       - ./model/zipformer:/app/model
       - ./config.yaml:/app/config/config.yaml
+      - ./model/capu:/app/capu
     # ── GPU config ──────────────────────────
     deploy:
       resources:

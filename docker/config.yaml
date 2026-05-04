@@ -41,3 +41,17 @@ model:
   sample_rate: 16000
   provider: "cpu"
   force_download: false
+
+# ── VAD (Voice Activity Detection) ───────────────────────
+# Silero VAD — lọc im lặng trước khi chạy ASR, tiết kiệm CPU
+vad:
+  threshold: 0.5             # Ngưỡng phát hiện giọng nói (0-1), càng cao càng khắt khe
+  min_speech_frames: 3       # Số frame liên tiếp có speech để xác nhận (512 mẫu/frame = 32ms)
+
+# ── Capu — Punctuation & Capitalization ──────────────────
+# Model: dragonSwing/xlm-roberta-capu (~1.1 GB)
+# Tự động thêm dấu câu (. , : ?) và viết hoa đúng (địa danh, tên người)
+capu:
+  enabled: true              # Bật/tắt tự động sửa câu
+  model_dir: "/app/capu"     # Thư mục chứa model (tự động tải từ HF nếu thiếu)
+  device: "cpu"              # cpu hoặc cuda

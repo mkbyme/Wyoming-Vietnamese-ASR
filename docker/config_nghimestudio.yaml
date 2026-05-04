@@ -38,3 +38,13 @@ model:
   sample_rate: 16000
   provider: "cpu"
   force_download: false
+
+# ── VAD (Voice Activity Detection) ───────────────────────
+vad:
+  threshold: 0.5
+  min_speech_frames: 3
+
+capu:
+  enabled: true
+  model_dir: "/app/capu"
+  device: "cpu"

@@ -23,3 +23,8 @@ aiofiles==23.2.1
 pydantic==2.5.0
 pyyaml>=6.0
 huggingface_hub[cli]>=0.20.0
+
+# Punctuation restoration (xlm-roberta-capu) — GPU via CUDA
+torch==2.5.1
+transformers==4.46.0
+sentencepiece==0.2.0
