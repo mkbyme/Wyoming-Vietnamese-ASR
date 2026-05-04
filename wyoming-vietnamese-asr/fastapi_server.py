@@ -14,6 +14,13 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 
 import sherpa_onnx
 
+def _normalize_text(text: str) -> str:
+    """Convert ASR output to proper casing and suppress noise during silence."""
+    text = text.strip()
+    if len(text) < 5:
+        return ""
+    return text.capitalize()
+
 app = FastAPI(title="Vietnamese ASR - Zipformer-30M-RNNT", version="1.0.0")
 
 MODEL_DIR = Path("/app/model")
@@ -87,7 +94,7 @@ async def transcribe(audio: UploadFile = File(...)):
         
         Path(tmp_path).unlink(missing_ok=True)
         
-        return {"text": result.text.strip(), "duration": len(audio_data) / 16000}
+        return {"text": _normalize_text(result.text), "duration": len(audio_data) / 16000}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

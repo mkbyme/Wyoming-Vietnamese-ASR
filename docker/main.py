@@ -23,6 +23,13 @@ import sherpa_onnx
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
+def _normalize_text(text: str) -> str:
+    """Convert ASR output to proper casing and suppress noise during silence"""
+    text = text.strip()
+    if len(text) < 5:
+        return ""
+    return text.capitalize()
+
 def _get_bool(key: str, default: bool = False) -> bool:
     return os.environ.get(key, str(default)).lower() in ("1", "true", "yes")
 
@@ -350,7 +357,7 @@ def _run_wyoming():
             stream = _MODEL_CFG.recognizer.create_stream()
             stream.accept_waveform(self.sample_rate, audio_data)
             _MODEL_CFG.recognizer.decode_stream(stream)
-            return stream.result.text.strip()
+            return _normalize_text(stream.result.text)
 
         def _build_info(self) -> Info:
             cfg = _MODEL_CFG
@@ -579,7 +586,7 @@ def _run_fastapi():
             cfg.recognizer.decode_stream(stream)
             infer_ms = (time.perf_counter() - t_start) * 1000
 
-            text = stream.result.text.strip()
+            text = _normalize_text(stream.result.text)
             rtf  = infer_ms / 1000 / max(duration, 0.001)
 
             _LOGGER.info(
